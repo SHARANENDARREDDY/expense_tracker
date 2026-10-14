@@ -1,0 +1,341 @@
+{
+  "name": "Expense Tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "626d4d47-5b59-40e2-98ad-928567fdbbbd",
+      "name": "Telegram Trigger",
+      "webhookId": "263df4bd-3015-4d3e-9af6-037725e7192d",
+      "credentials": {
+        "telegramApi": {
+          "id": "RIECMpKDeuDN0JmB",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3a0df76a-6bd8-4711-a808-2347018cd040",
+              "name": "message",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            },
+            {
+              "id": "9c91fb68-eb4f-44e7-9136-eeb900df5b8c",
+              "name": "chat_id",
+              "value": "={{ $json.message.chat.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "a675414e-e444-43ea-aac3-b576e9c95c70",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=\nYou are an AI expense-tracking assistant.\n\nInterpret the user's message and extract the following fields:\n- intent: add, list, total, summary, search, or delete\n- amount: numeric expense amount, or null if missing ang in Rs\n- category: a short category such as Food, Transport, Shopping, Bills, Health, Education, or Other\n- description: a short description of the expense\n- date: the expense date in YYYY-MM-DD format\n\nDate rules:\n1. Today's date is provided below.\n2. If the user says \"today\", use today's date.\n3. If the user says \"yesterday\", use the previous calendar date.\n4. If the user explicitly gives a date, interpret it carefully.\n5. If the user doesn't mention a date, use today's date.\n6. Never invent a different date.\n7. If the expense date is genuinely ambiguous, ask for clarification.\n\nIf the message is an expense, identify the amount, category, description, and date.\nIf information required to record an expense is missing or unclear, ask the user for clarification.\n\n\nUser message: {{ $json.message }}\nCurrent date: {{ $now.setZone('Asia/Kolkata').toFormat('yyyy-MM-dd') }}\n",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        624,
+        0
+      ],
+      "id": "afab6f13-ddd4-48ec-a578-269808e3e00c",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "google/gemma-4-31b-it",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        640,
+        176
+      ],
+      "id": "6eb39d7b-f953-4c2f-a709-39a12623c2fe",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "zCF1J4wCXUfCCOtf",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "96eef1ee-cb28-485a-a601-f7d5d4f08185",
+      "name": "When chat message received",
+      "webhookId": "10ac9f7c-a883-442e-a884-c082c58af5fc"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "\nconst raw = $json.text;\n\nconst cleaned = raw\n  .replace(/^```json\\s*/i, \"\")\n  .replace(/^```\\s*/i, \"\")\n  .replace(/\\s*```$/i, \"\")\n  .trim();\n\nconst expense = JSON.parse(cleaned);\n\nif (\n  expense.intent === \"add\" &&\n  (!Number.isFinite(expense.amount) || expense.amount <= 0)\n) {\n  throw new Error(\"Expense amount must be a positive number.\");\n}\n\nreturn {\n  json: {\n    ...expense,\n    chat_id: $(\"Edit Fields\").first().json.chat_id\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        0
+      ],
+      "id": "dae337ce-88a6-4594-8d6c-5fa4652f8f64",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1sPd7ogZltWv9PW9dKIsgWwN6OXbNRi-LoPdy9OuMvaQ",
+          "mode": "list",
+          "cachedResultName": "Expense Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sPd7ogZltWv9PW9dKIsgWwN6OXbNRi-LoPdy9OuMvaQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sPd7ogZltWv9PW9dKIsgWwN6OXbNRi-LoPdy9OuMvaQ/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Amount": "={{ $json.amount }}",
+            "Category": "={{ $json.category }}",
+            "Date": "={{ $json.date }}",
+            "Description": "={{ $json.description }}",
+            "Chat ID": "={{ $json.chat_id }}",
+            "ID": "={{ 'EXP-' + $now.toMillis() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Chat ID",
+              "displayName": "Chat ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1184,
+        0
+      ],
+      "id": "6207f5cf-62ca-48fe-a09b-878150f95a25",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "HHIOjV20fXSVwBiU",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json[\"Chat ID\"] \n\n $(\"Code\").first().json.chat_id }}",
+        "text": "= ✅ Expense Added Successfully!  \nAmount: ₹ {{ $json.Amount }}\nCategory:{{ $json.Category }}  \nDescription:{{ $json.Description }} \nDate: {{ $json.Date }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1392,
+        0
+      ],
+      "id": "022966c5-bc3f-4cea-9d02-e27553275515",
+      "name": "Send a text message",
+      "webhookId": "98b91c32-e383-4b01-8966-a71d598e3da2",
+      "credentials": {
+        "telegramApi": {
+          "id": "RIECMpKDeuDN0JmB",
+          "name": "Unnamed credential"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "2d0eac3c-49e4-4ad2-83cb-2bc90dc544a6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "98fd47754f709761077646f9d60b32b1839d5ca57b8cf9503ae52e0ba9a4f50a"
+  },
+  "id": "d8wI7fg4Waf7RZnI",
+  "tags": []
+}

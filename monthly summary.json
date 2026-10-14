@@ -1,0 +1,147 @@
+{
+  "name": "monthly summary",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtDayOfMonth": 30,
+              "triggerAtHour": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "52f55677-a41a-4ed4-83db-5912f6288bdd",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1sPd7ogZltWv9PW9dKIsgWwN6OXbNRi-LoPdy9OuMvaQ",
+          "mode": "list",
+          "cachedResultName": "Expense Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sPd7ogZltWv9PW9dKIsgWwN6OXbNRi-LoPdy9OuMvaQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sPd7ogZltWv9PW9dKIsgWwN6OXbNRi-LoPdy9OuMvaQ/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        0
+      ],
+      "id": "789314f5-5b63-4186-8eca-8039324a94b9",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "HHIOjV20fXSVwBiU",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst expenses = $input.all().map(item => item.json);\n\n// Current month in India\nconst now = new Date(\n  new Date().toLocaleString(\"en-US\", {\n    timeZone: \"Asia/Kolkata\"\n  })\n);\n\nconst year = now.getFullYear();\nconst month = now.getMonth();\n\n// Filter expenses for the current month\nconst monthlyExpenses = expenses.filter(expense => {\n  const rawDate = expense.Date ?? expense.date;\n\n  if (!rawDate) return false;\n\n  // Read YYYY-MM-DD without timezone shifting the date\n  const match = String(rawDate).match(/^(\\d{4})-(\\d{2})-(\\d{2})/);\n\n  if (!match) return false;\n\n  const expenseYear = Number(match[1]);\n  const expenseMonth = Number(match[2]) - 1;\n\n  return expenseYear === year && expenseMonth === month;\n});\n\n// Calculate total spending\nconst total = monthlyExpenses.reduce((sum, expense) => {\n  const amount = Number(expense.Amount ?? expense.amount ?? 0);\n  return sum + (Number.isFinite(amount) ? amount : 0);\n}, 0);\n\n// Calculate category-wise spending\nconst categories = {};\n\nfor (const expense of monthlyExpenses) {\n  const category =\n    String(expense.Category ?? expense.category ?? \"Other\").trim() ||\n    \"Other\";\n\n  const amount = Number(expense.Amount ?? expense.amount ?? 0);\n\n  if (Number.isFinite(amount)) {\n    categories[category] = (categories[category] || 0) + amount;\n  }\n}\n\n// Format category totals\nconst categoryLines = Object.entries(categories)\n  .sort((a, b) => b[1] - a[1])\n  .map(([category, amount]) =>\n    `• ${category}: ₹${amount.toFixed(2)}`\n  )\n  .join(\"\\n\");\n\n// Format month name\nconst monthName = new Intl.DateTimeFormat(\"en-IN\", {\n  month: \"long\",\n  year: \"numeric\",\n  timeZone: \"Asia/Kolkata\"\n}).format(new Date());\n\n// Build Telegram message\nconst report = [\n  `📊 MONTHLY EXPENSE REPORT`,\n  `📅 ${monthName}`,\n  ``,\n  `💰 Total Spent: ₹${total.toFixed(2)}`,\n  `🧾 Number of Expenses: ${monthlyExpenses.length}`,\n  ``,\n  `📂 CATEGORY BREAKDOWN`,\n  categoryLines || \"No expenses recorded this month.\",\n  ``,\n  `Report generated automatically by your Expense Tracker.`\n].join(\"\\n\");\n\nreturn [\n  {\n    json: {\n      report,\n      total,\n      expenseCount: monthlyExpenses.length,\n      categoryBreakdown: categories,\n      reportMonth: monthName\n    }\n  }\n];\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "20173d3a-adbc-485a-8755-801f6c450642",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "chatId": "6229907286",
+        "text": "={{ $json.report }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "3cafe165-3462-4bbe-9e14-0530f90dd334",
+      "name": "Send a text message",
+      "webhookId": "02353f3a-b5ff-4aa0-a1cf-ad5b658658a5",
+      "credentials": {
+        "telegramApi": {
+          "id": "RIECMpKDeuDN0JmB",
+          "name": "Unnamed credential"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "8a3a555a-2c58-46fe-b3df-c5fcce6b8cac",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "98fd47754f709761077646f9d60b32b1839d5ca57b8cf9503ae52e0ba9a4f50a"
+  },
+  "id": "vL0C4eoPS3NAKzIi",
+  "tags": []
+}
